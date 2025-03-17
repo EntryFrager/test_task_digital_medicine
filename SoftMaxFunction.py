@@ -12,15 +12,15 @@ class SoftMax(Module):
 
     def updateOutput(self, input):
         # start with normalization for numerical stability
-        offset = np.subtract(input, input.max(axis = 1, keepdims = True))
-        exp_offset = np.exp(offset)
+        offset      = np.subtract(input, input.max(axis = 1, keepdims = True))
+        exp_offset  = np.exp(offset)
         self.output = exp_offset / np.sum(exp_offset, axis = 1, keepdims = True)
 
         return self.output
 
 
     def updateGradInput(self, input, gradOutput):
-        sum_grad = np.sum(gradOutput * self.output, axis=1, keepdims=True)
+        sum_grad       = np.sum(gradOutput * self.output, axis = 1, keepdims = True)
         self.gradInput = self.output * (gradOutput - sum_grad)
 
         return self.gradInput

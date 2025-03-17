@@ -16,7 +16,7 @@ class Linear(Module):
     def __init__(self, n_in, n_out):
         super(Linear, self).__init__()
 
-        stdv = 1. / np.sqrt(n_in)
+        stdv   = 1. / np.sqrt(n_in)
         self.W = np.random.uniform(-stdv, stdv, size = (n_out, n_in))
         self.b = np.random.uniform(-stdv, stdv, size = n_out)
 

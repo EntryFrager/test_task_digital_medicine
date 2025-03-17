@@ -8,19 +8,25 @@ from Modules import Module
 
 class LogSoftMax(Module):
     def __init__(self):
-         super(LogSoftMax, self).__init__()
+        super(LogSoftMax, self).__init__()
+        self.softmax = None
 
 
     def updateOutput(self, input):
-        # start with normalization for numerical stability
-        self.output = np.subtract(input, input.max(axis=1, keepdims=True))
+        # # start with normalization for numerical stability
+        offset         = np.subtract(input, input.max(axis = 1, keepdims = True))
+        exp_offset     = np.exp(offset)
+        sum_exp_offset = np.sum(exp_offset, axis = 1, keepdims = True)
+        self.softmax   = exp_offset / sum_exp_offset
+        self.output    = offset - np.log(sum_exp_offset)
 
-        # Your code goes here. ################################################
         return self.output
 
 
     def updateGradInput(self, input, gradOutput):
-        # Your code goes here. ################################################
+        sum_grad       = np.sum(gradOutput, axis = 1, keepdims = True)
+        self.gradInput = gradOutput - self.softmax * sum_grad
+
         return self.gradInput
 
 
