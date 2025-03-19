@@ -12,9 +12,9 @@ class SoftMax(Module):
 
     def updateOutput(self, input):
         # start with normalization for numerical stability
-        offset      = np.subtract(input, input.max(axis = 1, keepdims = True))
-        exp_offset  = np.exp(offset)
-        self.output = exp_offset / np.sum(exp_offset, axis = 1, keepdims = True)
+        norm_input  = np.subtract(input, input.max(axis = 1, keepdims = True))
+        exp_norm    = np.exp(norm_input)
+        self.output = exp_norm / np.sum(exp_norm, axis = 1, keepdims = True)
 
         return self.output
 

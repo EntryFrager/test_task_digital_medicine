@@ -14,11 +14,11 @@ class LogSoftMax(Module):
 
     def updateOutput(self, input):
         # # start with normalization for numerical stability
-        offset         = np.subtract(input, input.max(axis = 1, keepdims = True))
-        exp_offset     = np.exp(offset)
-        sum_exp_offset = np.sum(exp_offset, axis = 1, keepdims = True)
-        self.softmax   = exp_offset / sum_exp_offset
-        self.output    = offset - np.log(sum_exp_offset)
+        norm_input     = np.subtract(input, input.max(axis = 1, keepdims = True))
+        exp_input      = np.exp(norm_input)
+        sum_exp_offset = np.sum(exp_input, axis = 1, keepdims = True)
+        self.softmax   = exp_input / sum_exp_offset
+        self.output    = norm_input - np.log(sum_exp_offset)
 
         return self.output
 
