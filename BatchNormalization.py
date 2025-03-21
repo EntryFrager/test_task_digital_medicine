@@ -196,4 +196,4 @@ def test_BatchNormalization():
     print("\nAll tests passed successfully!")
 
 
-test_BatchNormalization()
+# test_BatchNormalization()

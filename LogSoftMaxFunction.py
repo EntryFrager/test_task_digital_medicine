@@ -72,4 +72,4 @@ def test_LogSoftMax():
     print("\nAll tests passed successfully!")
 
 
-test_LogSoftMax()
+# test_LogSoftMax()

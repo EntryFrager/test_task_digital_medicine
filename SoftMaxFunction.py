@@ -71,4 +71,4 @@ def test_SoftMax():
     print("\nAll tests passed successfully!")
 
 
-test_SoftMax()
+# test_SoftMax()

@@ -97,4 +97,4 @@ def test_adam_optimizer():
     print("All tests passed successfully!")
 
 
-test_adam_optimizer()
+# test_adam_optimizer()

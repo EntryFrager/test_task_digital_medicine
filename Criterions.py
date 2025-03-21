@@ -61,7 +61,7 @@ class MSECriterion(Criterion):
 
 
     def updateOutput(self, input, target):
-        self.output = np.sum(np.power(input - target,2)) / input.shape[0]
+        self.output = np.sum(np.power(input - target, 2)) / input.shape[0]
         return self.output
 
 
@@ -84,8 +84,6 @@ class ClassNLLCriterionUnstable(Criterion):
 
 
     def updateOutput(self, input, target):
-
-        # Use this trick to avoid numerical errors
         input_clamp = np.clip(input, self.EPS, 1 - self.EPS)
         self.output = - np.sum(target * np.log(input_clamp)) / input.shape[0]
         
@@ -93,8 +91,6 @@ class ClassNLLCriterionUnstable(Criterion):
 
 
     def updateGradInput(self, input, target):
-
-        # Use this trick to avoid numerical errors
         input_clamp    = np.clip(input, self.EPS, 1 - self.EPS)
         self.gradInput = - target / (input_clamp * input.shape[0])  
 
@@ -210,6 +206,6 @@ def test_NLLCriterion():
     print("\nAll tests passed successfully!")
 
 
-test_NLLCriterionUnstable()
+# test_NLLCriterionUnstable()
 
-test_NLLCriterion()
+# test_NLLCriterion()

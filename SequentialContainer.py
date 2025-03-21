@@ -178,4 +178,4 @@ def test_Sequential():
     print("\nAll tests passed successfully!")
 
 
-test_Sequential()
+# test_Sequential()

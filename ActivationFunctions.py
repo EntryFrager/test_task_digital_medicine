@@ -202,8 +202,8 @@ def test_SoftPlus():
     print("\nAll tests passed successfully!")
 
 
-test_LeakyReLU()
+# test_LeakyReLU()
 
-test_ELU()
+# test_ELU()
 
-test_SoftPlus()
+# test_SoftPlus()
