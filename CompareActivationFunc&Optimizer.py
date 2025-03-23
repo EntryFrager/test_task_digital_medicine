@@ -61,6 +61,7 @@ X_test = load_image('data/t10k-images-idx3-ubyte.gz')
 Y_train = load_mnist_labels('data/train-labels-idx1-ubyte.gz')
 Y_test = load_mnist_labels('data/t10k-labels-idx1-ubyte.gz')
 
+
 X_train, X_val = X_train[:-10000], X_train[-10000:]
 Y_train, Y_val = Y_train[:-10000], Y_train[-10000:]
 
@@ -68,13 +69,13 @@ hot_y_train = one_hot_encode(Y_train)
 hot_y_val = one_hot_encode(Y_val)
 hot_y_test = one_hot_encode(Y_test)
 
-# one_hot_encode_test(hot_y_train)
+one_hot_encode_test(hot_y_train)
 
-X_train = X_train.reshape(28, 28, 1, -1)
-X_val   = X_val.reshape(28, 28, 1, -1)
-X_test  = X_test.reshape(28, 28, 1, -1)
+X_train = X_train.reshape(X_train.shape[0], 1, -1)
+X_val   = X_val.reshape(X_val.shape[0], 1, -1)
+X_test  = X_test.reshape(X_test.shape[0], 1, -1)
 
-# dimension_test(X_train, X_val, X_test)
+dimension_test(X_train, X_val, X_test)
 
 batch_size = 64
 n_epoch = 15

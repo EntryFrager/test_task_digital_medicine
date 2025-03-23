@@ -72,6 +72,7 @@ class Sequential(Module):
         curGradInput = gradOutput
 
         for i in reversed(range(len(self.modules))):
+            print(input.shape)
             self.gradInput = self.modules[i].backward(self.curOutput[i], curGradInput)
             curGradInput = self.gradInput
 

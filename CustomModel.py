@@ -81,7 +81,7 @@ def augment_batch(images):
 def get_improved_net():
     net = Sequential()
     
-    net.add(Linear(28*28, 512))
+    net.add(Linear(28 * 28, 512))
     net.add(BatchNormalization(alpha=0.9))
     net.add(ChannelwiseScaling(512))
     net.add(ReLU())
