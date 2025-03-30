@@ -1,11 +1,11 @@
 import numpy as np
 
-from LinearLayer import Linear
-from SequentialContainer import Sequential
-from BatchNormalization import BatchNormalization, ChannelwiseScaling
-from LogSoftMaxFunction import LogSoftMax
-from Optimizers import sgd_momentum, adam_optimizer
-from ActivationFunctions import ReLU
+from Modules.LinearLayer import Linear
+from Modules.SequentialContainer import Sequential
+from Modules.BatchNormalization import BatchNormalization, ChannelwiseScaling
+from Modules.LogSoftMaxFunction import LogSoftMax
+from Modules.Optimizers import sgd_momentum, adam_optimizer
+from Modules.ActivationFunctions import ReLU
 
 
 def get_batches(dataset, batch_size):
@@ -16,19 +16,21 @@ def get_batches(dataset, batch_size):
     np.random.shuffle(indices)
 
     for start in range(0, n_samples, batch_size):
-        end = min(start + batch_size, n_samples)
-        batch_idx = indices[start:end]
-        yield X[batch_idx], Y[batch_idx]
+        if start + batch_size <= n_samples:
+            end = start + batch_size
+        
+            batch_idx = indices[start:end]
+            yield X[batch_idx], Y[batch_idx]
 
 
 def get_optimizer(optimizer_name):
     if optimizer_name == 'sgd_momentum':
-        optimizer_config = {'learning rate': 0.01,
+        optimizer_config = {'learning_rate': 0.01,
                             'momentum': 0.9}
         optimizer_state = {}
 
     elif optimizer_name == 'adam_optimizer':
-        optimizer_config = {'learning rate': 0.01,
+        optimizer_config = {'learning_rate': 0.001,
                             'beta1': 0.9,
                             'beta2': 0.999,
                             'epsilon': 1e-8}
@@ -87,7 +89,7 @@ def train(net, criterion, optimizer_name, n_epoch,
                 running_acc  += np.sum(predictions.argmax(axis = 1) == y_batch.argmax(axis = 1))
 
             epoch_loss = running_loss / num_batches
-            epoch_acc  = running_acc / y.shape[0]
+            epoch_acc  = running_acc  / y.shape[0]
 
             if phase == 'train':
                 loss_train_history.append(epoch_loss)
@@ -101,11 +103,13 @@ def train(net, criterion, optimizer_name, n_epoch,
 
 def test(net, criterion, X_test, y_test, batch_size):
     net.evaluate()
+    
     num_batches  = X_test.shape[0] / batch_size
     running_loss = 0.
     running_acc  = 0.
+
     for x_batch, y_batch in get_batches((X_test, y_test), batch_size):
-        net.zeroGradParaameters()
+        net.zeroGradParameters()
 
         predictions = net.forward(x_batch)
         loss = criterion.forward(predictions, y_batch)
@@ -123,13 +127,13 @@ def get_net(activation = ReLU, norm = False):
 
     net.add(Linear(28 * 28, 100))
     if norm:
-        net.add(BatchNormalization(alpha = 0.0001))
+        net.add(BatchNormalization(alpha = 0.001))
         net.add(ChannelwiseScaling(100))
     net.add(activation())
 
     net.add(Linear(100, 10))
     if norm:
-        net.add(BatchNormalization(alpha = 0.0001))
+        net.add(BatchNormalization(alpha = 0.001))
         net.add(ChannelwiseScaling(10))
     net.add(LogSoftMax())
     return net
