@@ -1,17 +1,18 @@
 import numpy as np
 import gzip
 import matplotlib.pyplot as plt
-from scipy.ndimage import rotate, shift, affine_transform
 
-from Modules.ActivationFunctions import ReLU
-from Modules.Criterions import ClassNLLCriterion
-from Modules.LinearLayer import Linear
+from sklearn.model_selection import ParameterSampler
+
 from Modules.SequentialContainer import Sequential
-from Modules.BatchNormalization import BatchNormalization, ChannelwiseScaling
+from Modules.Conv2d import Conv2d
+from Modules.MaxPool2d import MaxPool2d
+from Modules.FlattenLayer import Flatten
+from Modules.LinearLayer import Linear
 from Modules.LogSoftMaxFunction import LogSoftMax
-from Modules.DropoutFunction import Dropout
+from Modules.ActivationFunctions import ReLU
 from Modules.Optimizers import sgd_momentum, adam_optimizer
-from ExampleNn import test
+from Modules.Criterions import ClassNLLCriterion
 
 
 def load_data():
@@ -27,11 +28,9 @@ def load_data():
     hot_y_val = one_hot_encode(Y_val)
     hot_y_test = one_hot_encode(Y_test)
 
-    X_train, hot_y_train = augmentation_data(X_train, hot_y_train, transform_func = [rotate_img, shift_img, affine_transform_img])
-
-    X_train = X_train.reshape(X_train.shape[0], -1)
-    X_val   = X_val.reshape(X_val.shape[0], -1)
-    X_test  = X_test.reshape(X_test.shape[0], -1)
+    X_train = X_train.reshape(-1, 1, 28, 28)
+    X_val   = X_val.reshape(-1, 1, 28, 28)
+    X_test  = X_test.reshape(-1, 1, 28, 28)
 
     return X_train, X_val, X_test, hot_y_train, hot_y_val, hot_y_test
 
@@ -52,40 +51,8 @@ def load_mnist_labels(filename):
     return data
 
 
-def augmentation_data(X_train, Y_train, transform_func):
-    X_augmented = []
-    Y_augmented = []
-
-    for i in range(len(X_train)):
-        X_augmented.append(X_train[i])
-        Y_augmented.append(Y_train[i])
-        
-        for func in transform_func:
-            X_augmented.append(func(X_train[i]))
-            Y_augmented.append(Y_train[i])
-
-    return np.array(X_augmented), np.array(Y_augmented)
-
-
-def rotate_img(img):
-    return rotate(img, 10, reshape = False)
-
-
-def shift_img(img):
-    return shift(img, [2, 2], mode = 'constant')
-
-
-def affine_transform_img(img):
-    return affine_transform(img, [[1.1, 0], [0, 1.0]])
-
-
 def one_hot_encode(y):
-    one_hot_y = np.zeros((y.shape[0], 10))
-    one_hot_y[np.arange(y.shape[0]), y] = 1
-
-    # one_hot_y = np.eye(10)[y]
-
-    return one_hot_y
+    return np.eye(10)[y]
 
 
 def get_batches(dataset, batch_size):
@@ -123,36 +90,32 @@ def get_optimizer(optimizer_name):
     return optimizer_config, optimizer_state
 
 
-def get_improved_net():
-    net = Sequential()
+def create_cnn(kernel_size, out_channels):
+    CNN = Sequential()
+    CNN.add(Conv2d(in_channels = 1, out_channels = out_channels, kernel_size = kernel_size))
+    CNN.add(MaxPool2d(kernel_size = kernel_size))
+    CNN.add(ReLU())
+    CNN.add(Flatten())
+
+    pad = (kernel_size - (28 % kernel_size)) % kernel_size
+    size = pad + 28
+    in_features = out_channels * ((size // kernel_size) ** 2)
     
-    net.add(Linear(28 * 28, 512))
-    net.add(BatchNormalization(alpha = 0.9))
-    net.add(ChannelwiseScaling(512))
-    net.add(ReLU())
-    net.add(Dropout(0.3))
-    
-    net.add(Linear(512, 256))
-    net.add(BatchNormalization(alpha = 0.9))
-    net.add(ChannelwiseScaling(256))
-    net.add(ReLU())
-    net.add(Dropout(0.3))
-    
-    net.add(Linear(256, 10))
-    net.add(LogSoftMax())
-    
-    return net
+    CNN.add(Linear(in_features, 10))
+    CNN.add(LogSoftMax())
+    return CNN
 
 
-def train_with_augmentation(net, criterion, optimizer_name, n_epoch,
-                           X_train, y_train, X_val, y_val, batch_size):
+def train(net, criterion, optimizer_name, optimizer_config,
+          n_epoch, X_train, y_train, X_val, y_val, batch_size):
+
     loss_train_history = []
     loss_val_history = []
-    optimizer_config, optimizer_state = get_optimizer(optimizer_name)
-    
-    for epoch in range(n_epoch):
-        print('Epoch {}/{}:'.format(epoch + 1, n_epoch), flush = True)
-         
+    optimizer_state = {}
+
+    for i in range(n_epoch):
+        print('Epoch {}/{}:'.format(i, n_epoch - 1), flush = True)
+
         for phase in ['train', 'val']:
             if phase == 'train':
                 X = X_train
@@ -162,22 +125,22 @@ def train_with_augmentation(net, criterion, optimizer_name, n_epoch,
                 X = X_val
                 y = y_val
                 net.evaluate()
-            
-            running_loss = 0.0
-            running_acc  = 0.0
-            num_batches  = X.shape[0] / batch_size
-            
+
+            num_batches = X.shape[0] / batch_size
+            running_loss = 0.
+            running_acc = 0.
+
             for x_batch, y_batch in get_batches((X, y), batch_size):
-                
+
                 net.zeroGradParameters()
-                
+
                 predictions = net.forward(x_batch)
                 loss = criterion.forward(predictions, y_batch)
-                
+
                 if phase == 'train':
                     gradOutput = criterion.backward(predictions, y_batch)
                     net.backward(x_batch, gradOutput)
-                    
+
                     variables = net.getParameters()
                     gradients = net.getGradParameters()
 
@@ -185,41 +148,69 @@ def train_with_augmentation(net, criterion, optimizer_name, n_epoch,
                         sgd_momentum(variables, gradients, optimizer_config, optimizer_state)
                     else:
                         adam_optimizer(variables, gradients, optimizer_config, optimizer_state)
-                
+
                 running_loss += loss
-                running_acc  += np.sum(predictions.argmax(axis=1) == y_batch.argmax(axis=1))
-            
+                running_acc  += np.sum(predictions.argmax(axis = 1) == y_batch.argmax(axis = 1))
+
             epoch_loss = running_loss / num_batches
             epoch_acc  = running_acc  / y.shape[0]
-            
+
             if phase == 'train':
                 loss_train_history.append(epoch_loss)
             else:
                 loss_val_history.append(epoch_loss)
-            
-            print(f'{phase} Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
-    
+
+            print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc), flush = True)
+
     return net, loss_train_history, loss_val_history
 
 
 X_train, X_val, X_test, hot_y_train, hot_y_val, hot_y_test = load_data()
 
-batch_size = 64
-n_epoch    = 15
-criterion  = ClassNLLCriterion()
+param_grid = {
+    'kernel_size': [1, 3, 5, 7],
+    'out_channels': [1, 2, 3, 4],
+    'lr': [0.05, 0.1, 0.01],
+    'momentum': [0.8, 0.9, 0.99],
+}
 
-net = get_improved_net()
+param_list = list(ParameterSampler(param_grid, n_iter = 3, random_state = 42))
+assert len(param_list) == 3
 
-net, train_loss, val_loss = train_with_augmentation(net, criterion, 'adam_optimizer', n_epoch,
-                                                    X_train, hot_y_train, X_val, hot_y_val, batch_size)
+best_loss = np.inf
+best_params = None
+results = []
+n_epoch = 3
+batch_size = 32
+criterion = ClassNLLCriterion()
 
-test_loss, test_acc = test(net, criterion, X_test, hot_y_test, batch_size)
-print(f'\nFinal Test Loss: {test_loss:.4f} | Accuracy: {test_acc:.4f}')
+net = create_cnn(5, 3)
 
-plt.plot(train_loss, label = 'Train Loss')
-plt.plot(val_loss, label = 'Validation Loss')
-plt.title('Learning Curve')
-plt.xlabel('Epochs')
-plt.ylabel('Loss')
-plt.legend()
-plt.show()
+optimizer_config = {'learning_rate': 0.05, 'momentum': 0.99}
+
+net, loss_train_history, loss_val_history = train(
+    net, criterion, 'sgd_momentum', optimizer_config,
+    n_epoch, X_train, hot_y_train, X_val, hot_y_val, batch_size
+)
+
+for params in param_list:
+    net = create_cnn(params['kernel_size'], params['out_channels'])
+
+    optimizer_config = {'learning_rate': params['lr'], 'momentum': params['momentum']}
+
+    print(params)
+
+    net, loss_train_history, loss_val_history = train(
+        net, criterion, 'sgd_momentum', optimizer_config,
+        n_epoch, X_train, hot_y_train, X_val, hot_y_val, batch_size
+    )
+
+    final_val_loss = loss_val_history[-1]
+    results.append((params, final_val_loss))
+
+    if final_val_loss < best_loss:
+        best_loss = final_val_loss
+        best_params = params
+
+print("Best hyperparameters:", best_params)
+print("Best validation loss: {:.4f}".format(best_loss))

@@ -1,7 +1,7 @@
 import numpy as np
 
 from tqdm import tqdm
-from Modules.BasicModule import Module
+from BasicModule import Module
 
 
 class Dropout(Module):

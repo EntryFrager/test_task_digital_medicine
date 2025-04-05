@@ -11,22 +11,56 @@ class MaxPool2d(Module):
         super(MaxPool2d, self).__init__()
         self.kernel_size = kernel_size
         self.gradInput = None
+        self.max_ind = None
+
+        self.pad_h = None
+        self.pad_w = None
+
 
     def updateOutput(self, input):
-        input_h, input_w = input.shape[-2:]
-        # your may remove these asserts and implement MaxPool2d with padding
-        assert input_h % self.kernel_size == 0
-        assert input_w % self.kernel_size == 0
+        batch_size, channels, input_h, input_w = input.shape
 
-        # YOUR CODE #############################
-        # self.output = ...
-        # self.max_indices = ...
+        self.pad_h = (self.kernel_size - (input_h % self.kernel_size)) % self.kernel_size
+        self.pad_w = (self.kernel_size - (input_w % self.kernel_size)) % self.kernel_size
+
+        if self.pad_h > 0 or self.pad_w > 0:
+            input = np.pad(input, ((0, 0), (0, 0), (0, self.pad_h), (0, self.pad_w)))
+
+        input_h, input_w = input.shape[2], input.shape[3]
+
+        input = input.reshape(batch_size, channels, input_h // self.kernel_size, self.kernel_size, input_w // self.kernel_size, self.kernel_size)
+        input = input.transpose(0, 1, 2, 4, 3, 5)
+        input = input.reshape(batch_size, channels, input_h // self.kernel_size, input_w // self.kernel_size, -1)
+
+        self.max_ind = np.argmax(input, axis = -1)
+        self.output  = np.max(input, axis = -1)
+
         return self.output
 
+
     def updateGradInput(self, input, gradOutput):
-        # YOUR CODE #############################
-        # self.gradInput = ...
+        batch_size, channels, input_h, input_w = input.shape
+
+        input_h += self.pad_h
+        input_w += self.pad_w
+
+        self.gradInput = np.zeros_like(input)
+
+        grad = np.zeros((batch_size, channels, input_h // self.kernel_size, input_w // self.kernel_size, self.kernel_size ** 2))
+
+        np.put_along_axis(grad, self.max_ind[..., np.newaxis], gradOutput[..., np.newaxis], axis=-1)
+
+        grad = grad.reshape(batch_size, channels, input_h // self.kernel_size, input_w // self.kernel_size, self.kernel_size, self.kernel_size)
+        grad = grad.transpose(0, 1, 2, 4, 3, 5)
+        grad = grad.reshape(batch_size, channels, input_h, input_w)
+
+        if self.pad_h > 0 or self.pad_w > 0:
+            grad = grad[:, :, :input_h, :input_w]
+
+        self.gradInput = grad
+
         return self.gradInput
+
 
     def __repr__(self):
         q = 'MaxPool2d, kern %d, stride %d' %(self.kernel_size, self.kernel_size)
@@ -74,4 +108,4 @@ def test_MaxPool2d():
     print("\nAll tests passed successfully!")
 
 
-test_MaxPool2d()
+# test_MaxPool2d()

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from Modules.ActivationFunctions import ReLU, ELU, LeakyReLU, SoftPlus
 from Modules.Criterions import ClassNLLCriterion
-from ExampleCnn import train, test, get_net
+from ExampleNn import train, test, get_net
 
 
 def load_data():

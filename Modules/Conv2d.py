@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 import scipy as sp
-import scipy.signal
 
 from torch.autograd import Variable
 from tqdm import tqdm
@@ -23,51 +22,93 @@ class Conv2d(Module):
         self.gradW = np.zeros_like(self.W)
         self.gradb = np.zeros_like(self.b)
 
+
     def updateOutput(self, input):
         pad_size = self.kernel_size // 2
-        # YOUR CODE ##############################
-        # 1. zero-pad the input array
-        # 2. compute convolution using scipy.signal.correlate(... , mode='valid')
-        # 3. add bias value
 
-        # self.output = ...
+        input_pad = np.pad(input, ((0, 0), (0, 0), (pad_size, pad_size), (pad_size, pad_size)))
+        batch_size, height, width = input.shape[0], input.shape[2], input.shape[3]
+        
+        self.output = np.zeros((batch_size, self.out_channels, height, width))
+
+        for n_batch in range(batch_size):
+            for out_channel in range(self.out_channels):
+                channel_sum = np.zeros((height, width))
+                
+                for in_channel in range(self.in_channels):
+                    cur_input = input_pad[n_batch, in_channel]
+                    kernel = self.W[out_channel, in_channel]
+
+                    channel_sum += sp.signal.correlate(cur_input, kernel, mode = 'valid')
+
+                self.output[n_batch, out_channel] = channel_sum + self.b[out_channel]
 
         return self.output
 
+
     def updateGradInput(self, input, gradOutput):
         pad_size = self.kernel_size // 2
-        # YOUR CODE ##############################
-        # 1. zero-pad the gradOutput
-        # 2. compute 'self.gradInput' value using scipy.signal.correlate(... , mode='valid')
 
-        # self.gradInput = ...
+        gradOutputPad = np.pad(gradOutput, ((0, 0), (0, 0), (pad_size, pad_size), (pad_size, pad_size)))
+ 
+        batch_size, _, height, width = input.shape
+
+        self.gradInput = np.zeros_like(input)
+        
+        for n_batch in range(batch_size):
+            for in_channel in range(self.in_channels):
+                grad = np.zeros((height + pad_size, width + pad_size))
+
+                for out_channel in range(self.out_channels):
+                    cur_grad = gradOutputPad[n_batch, out_channel]
+                    kernel = self.W[out_channel, in_channel][::-1, ::-1]
+
+                    temp = sp.signal.correlate(cur_grad, kernel, mode = 'valid')
+
+                    print(temp.shape, grad.shape)
+
+                    grad += temp
+
+                self.gradInput[n_batch, in_channel] = grad
 
         return self.gradInput
 
+
     def accGradParameters(self, input, gradOutput):
         pad_size = self.kernel_size // 2
-        # YOUR CODE #############
-        # 1. zero-pad the input
-        # 2. compute 'self.gradW' using scipy.signal.correlate(... , mode='valid')
-        # 3. compute 'self.gradb' - formulas like in Linear of ChannelwiseScaling layers
 
-        # self.gradW = ...
-        # self.gradb = ...
-        pass
+        input_padded = np.pad(input, ((0, 0), (0, 0), (pad_size, pad_size), (pad_size, pad_size)))
+        batch_size = input.shape[0]
+        
+        for n_batch in range(batch_size):
+            for out_channel in range(self.out_channels):
+                grad = gradOutput[n_batch, out_channel]
+
+                for in_channel in range(self.in_channels):
+                    cur_input = input_padded[n_batch, in_channel]
+                    
+                    self.gradW[out_channel, in_channel] += sp.signal.correlate(cur_input, grad, mode = 'valid')
+        
+        self.gradb += np.sum(gradOutput, axis = (0, 2, 3))
+
 
     def zeroGradParameters(self):
         self.gradW.fill(0)
         self.gradb.fill(0)
 
+
     def getParameters(self):
         return [self.W, self.b]
+
 
     def getGradParameters(self):
         return [self.gradW, self.gradb]
 
+
     def setParameters(self, parameters):
         self.W = parameters[0]
         self.b = parameters[1]
+
 
     def __repr__(self):
         s = self.W.shape
