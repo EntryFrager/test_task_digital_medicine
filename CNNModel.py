@@ -1,8 +1,9 @@
 import numpy as np
 import gzip
-import matplotlib.pyplot as plt
 
 from sklearn.model_selection import ParameterSampler
+
+from sklearn.model_selection import KFold
 
 from Modules.SequentialContainer import Sequential
 from Modules.Conv2d import Conv2d
@@ -98,8 +99,7 @@ def create_cnn(kernel_size, out_channels):
     CNN.add(Flatten())
 
     pad = (kernel_size - (28 % kernel_size)) % kernel_size
-    size = pad + 28
-    in_features = out_channels * ((size // kernel_size) ** 2)
+    in_features = out_channels * (((pad + 28) // kernel_size) ** 2)
     
     CNN.add(Linear(in_features, 10))
     CNN.add(LogSoftMax())
@@ -114,7 +114,7 @@ def train(net, criterion, optimizer_name, optimizer_config,
     optimizer_state = {}
 
     for i in range(n_epoch):
-        print('Epoch {}/{}:'.format(i, n_epoch - 1), flush = True)
+        print('Epoch {}/{}:'.format(i + 1, n_epoch), flush = True)
 
         for phase in ['train', 'val']:
             if phase == 'train':
@@ -151,7 +151,7 @@ def train(net, criterion, optimizer_name, optimizer_config,
 
                 running_loss += loss
                 running_acc  += np.sum(predictions.argmax(axis = 1) == y_batch.argmax(axis = 1))
-
+            
             epoch_loss = running_loss / num_batches
             epoch_acc  = running_acc  / y.shape[0]
 
@@ -165,16 +165,38 @@ def train(net, criterion, optimizer_name, optimizer_config,
     return net, loss_train_history, loss_val_history
 
 
+def test(net, criterion, X_test, y_test, batch_size):
+    X_test, y_test = X_test[:3200], y_test[:3200]
+    net.evaluate()
+    num_batches = X_test.shape[0] / batch_size
+    running_loss = 0.
+    running_acc = 0.
+    for x_batch, y_batch in get_batches((X_test, y_test), batch_size):
+        net.zeroGradParameters()
+
+        predictions = net.forward(x_batch)
+        loss = criterion.forward(predictions, y_batch)
+        running_loss += loss
+        running_acc += (predictions.argmax(axis=1) == y_batch.argmax(axis=1)).astype(float).mean()
+
+    epoch_loss = running_loss / num_batches
+    epoch_acc = running_acc / num_batches
+    print('Final Test Loss: {:.4f} Final Test Acc: {:.4f}'.format(epoch_loss, epoch_acc), flush=True)
+
+    return epoch_loss, epoch_acc
+
+
 X_train, X_val, X_test, hot_y_train, hot_y_val, hot_y_test = load_data()
 
 param_grid = {
     'kernel_size': [1, 3, 5, 7],
-    'out_channels': [1, 2, 3, 4],
-    'lr': [0.05, 0.1, 0.01],
+    'out_channels': [4, 8, 16, 32],
+    'lr': [0.05, 0.1, 0.01, 0.01],
     'momentum': [0.8, 0.9, 0.99],
 }
 
 param_list = list(ParameterSampler(param_grid, n_iter = 3, random_state = 42))
+print(param_list)
 assert len(param_list) == 3
 
 best_loss = np.inf
@@ -184,21 +206,9 @@ n_epoch = 3
 batch_size = 32
 criterion = ClassNLLCriterion()
 
-net = create_cnn(5, 3)
-
-optimizer_config = {'learning_rate': 0.05, 'momentum': 0.99}
-
-net, loss_train_history, loss_val_history = train(
-    net, criterion, 'sgd_momentum', optimizer_config,
-    n_epoch, X_train, hot_y_train, X_val, hot_y_val, batch_size
-)
-
 for params in param_list:
     net = create_cnn(params['kernel_size'], params['out_channels'])
-
     optimizer_config = {'learning_rate': params['lr'], 'momentum': params['momentum']}
-
-    print(params)
 
     net, loss_train_history, loss_val_history = train(
         net, criterion, 'sgd_momentum', optimizer_config,
@@ -214,3 +224,39 @@ for params in param_list:
 
 print("Best hyperparameters:", best_params)
 print("Best validation loss: {:.4f}".format(best_loss))
+
+kf = KFold(n_splits = 5, shuffle = True, random_state = 42)
+
+X_all = np.concatenate([X_train, X_val], axis = 0)
+y_all = np.concatenate([hot_y_train, hot_y_val], axis = 0)
+
+best_nn_weights = None
+best_cv_loss = np.inf
+cv_losses = []
+n_epoch = 3
+batch_size = 32
+criterion = ClassNLLCriterion()
+
+for fold, (train_index, val_index) in enumerate(kf.split(X_all)):
+    X_train_cv, X_val_cv = X_all[train_index], X_all[val_index]
+    y_train_cv, y_val_cv = y_all[train_index], y_all[val_index]
+
+    net = create_cnn(best_params['kernel_size'], best_params['out_channels'])
+    optimizer_config = {'learning_rate': best_params['lr'], 'momentum': best_params['momentum']}
+
+    net, loss_train_history, loss_val_history = train(
+        net, criterion, 'sgd_momentum', optimizer_config,
+        n_epoch, X_train_cv, y_train_cv, X_val_cv, y_val_cv, batch_size
+    )
+
+    fold_val_loss = loss_val_history[-1]
+    cv_losses.append(fold_val_loss)
+
+    if fold_val_loss < best_cv_loss:
+        best_cv_loss = fold_val_loss
+        best_nn_weights = net.getParameters()
+
+net = create_cnn(best_params['kernel_size'], best_params['out_channels'])
+net.setParameters(best_nn_weights)
+
+epoch_loss, epoch_acc = test(net, criterion, X_test, hot_y_test, batch_size = 32)

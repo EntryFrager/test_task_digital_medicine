@@ -41,18 +41,18 @@ class MaxPool2d(Module):
     def updateGradInput(self, input, gradOutput):
         batch_size, channels, input_h, input_w = input.shape
 
-        input_h += self.pad_h
-        input_w += self.pad_w
+        padded_h = input_h + self.pad_h
+        padded_w = input_w + self.pad_w
 
         self.gradInput = np.zeros_like(input)
 
-        grad = np.zeros((batch_size, channels, input_h // self.kernel_size, input_w // self.kernel_size, self.kernel_size ** 2))
+        grad = np.zeros((batch_size, channels, padded_h // self.kernel_size, padded_w // self.kernel_size, self.kernel_size ** 2))
 
         np.put_along_axis(grad, self.max_ind[..., np.newaxis], gradOutput[..., np.newaxis], axis=-1)
 
-        grad = grad.reshape(batch_size, channels, input_h // self.kernel_size, input_w // self.kernel_size, self.kernel_size, self.kernel_size)
+        grad = grad.reshape(batch_size, channels, padded_h // self.kernel_size, padded_w // self.kernel_size, self.kernel_size, self.kernel_size)
         grad = grad.transpose(0, 1, 2, 4, 3, 5)
-        grad = grad.reshape(batch_size, channels, input_h, input_w)
+        grad = grad.reshape(batch_size, channels, padded_h, padded_w)
 
         if self.pad_h > 0 or self.pad_w > 0:
             grad = grad[:, :, :input_h, :input_w]

@@ -27,7 +27,7 @@ class Conv2d(Module):
         pad_size = self.kernel_size // 2
 
         input_pad = np.pad(input, ((0, 0), (0, 0), (pad_size, pad_size), (pad_size, pad_size)))
-        batch_size, height, width = input.shape[0], input.shape[2], input.shape[3]
+        batch_size, _, height, width = input.shape
         
         self.output = np.zeros((batch_size, self.out_channels, height, width))
 
@@ -53,21 +53,16 @@ class Conv2d(Module):
  
         batch_size, _, height, width = input.shape
 
-        self.gradInput = np.zeros_like(input)
+        self.gradInput = np.zeros_like(input)       
         
         for n_batch in range(batch_size):
             for in_channel in range(self.in_channels):
-                grad = np.zeros((height + pad_size, width + pad_size))
-
+                grad = np.zeros((height, width))
                 for out_channel in range(self.out_channels):
                     cur_grad = gradOutputPad[n_batch, out_channel]
                     kernel = self.W[out_channel, in_channel][::-1, ::-1]
 
-                    temp = sp.signal.correlate(cur_grad, kernel, mode = 'valid')
-
-                    print(temp.shape, grad.shape)
-
-                    grad += temp
+                    grad += sp.signal.correlate(cur_grad, kernel, mode = 'valid')
 
                 self.gradInput[n_batch, in_channel] = grad
 
@@ -173,4 +168,4 @@ def test_Conv2d():
     print("\nAll tests passed successfully!")
 
 
-test_Conv2d()
+# test_Conv2d()

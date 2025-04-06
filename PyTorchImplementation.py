@@ -1,10 +1,7 @@
 import torch
 import torchvision
 import torch.nn as nn
-import numpy as np
 import matplotlib.pyplot as plt
-
-import torchvision.transforms.v2
 
 #------------------------------------------------Network architecture-------------------------------------------------
 

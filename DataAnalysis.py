@@ -6,10 +6,6 @@ import matplotlib.pyplot as plt
 #------------------------------------------------------Decision Rule Without ML------------------------------------------------------
 
 def custom_rule(df):
-    """
-        Rule to predict Churn using no more than 3 conditions.
-    """
-
     return ((df['Total day charge'] > 45) & 
             (df['Customer service calls'] > 3) & 
             (df['Total day minutes'] > 240)).astype(int)
@@ -38,33 +34,33 @@ print(churn_groups_mean)
 churn_null = df[df['Churn'] == 0]['Customer service calls']
 churn_one  = df[df['Churn'] == 1]['Customer service calls']
 
-print("\nChurn = 0")
-print(churn_null.quantile([0.75, 0.85, 0.9]), '\n')
+# print("\nChurn = 0")
+# print(churn_null.quantile([0.75, 0.85, 0.9]), '\n')
 
-print("Churn = 1")
-print(churn_one.quantile([0.75, 0.85, 0.9]), '\n')
+# print("Churn = 1")
+# print(churn_one.quantile([0.75, 0.85, 0.9]), '\n')
 
-churn_0 = df[df['Churn'] == 0]['Total day charge']
-churn_1 = df[df['Churn'] == 1]['Total day charge']
+# churn_0 = df[df['Churn'] == 0]['Total day charge']
+# churn_1 = df[df['Churn'] == 1]['Total day charge']
 
-print("Churn = 0\n")
-print(churn_0.quantile([0.75, 0.85, 0.9]), '\n')
+# print("Churn = 0\n")
+# print(churn_0.quantile([0.75, 0.85, 0.9]), '\n')
 
-print("Churn = 1\n")
-print(churn_1.quantile([0.75, 0.85, 0.9]), '\n')
+# print("Churn = 1\n")
+# print(churn_1.quantile([0.75, 0.85, 0.9]), '\n')
 
-churn_0 = df[df['Churn'] == 0]['Total day minutes']
-churn_1 = df[df['Churn'] == 1]['Total day minutes']
+# churn_0 = df[df['Churn'] == 0]['Total day minutes']
+# churn_1 = df[df['Churn'] == 1]['Total day minutes']
 
-print("Churn = 0\n")
-print(churn_0.quantile([0.75, 0.85, 0.9]), '\n')
+# print("Churn = 0\n")
+# print(churn_0.quantile([0.75, 0.85, 0.9]), '\n')
 
-print("Churn = 1\n")
-print(churn_1.quantile([0.75, 0.85, 0.9]), '\n')
+# print("Churn = 1\n")
+# print(churn_1.quantile([0.75, 0.85, 0.9]), '\n')
 
-# A histogram of `Customer service calls` for `Churn=0` and `Churn=1`
-plt.hist(df[df['Churn'] == 0]['Customer service calls'], alpha = 0.5, label = 'Churn = 0')
-plt.hist(df[df['Churn'] == 1]['Customer service calls'], alpha = 0.5, label = 'Churn = 1')
+# A histogram of `Customer service calls` for `Churn = 0` and `Churn = 1`
+plt.hist(churn_null, alpha = 0.5, label = 'Churn = 0')
+plt.hist(churn_one,  alpha = 0.5, label = 'Churn = 1')
 plt.xlabel('Customer service calls')
 plt.ylabel('Quantity of customers')
 plt.axvline(x = 3)

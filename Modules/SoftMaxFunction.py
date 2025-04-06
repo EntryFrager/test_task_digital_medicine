@@ -11,7 +11,6 @@ class SoftMax(Module):
 
 
     def updateOutput(self, input):
-        # start with normalization for numerical stability
         norm_input  = np.subtract(input, input.max(axis = 1, keepdims = True))
         exp_norm    = np.exp(norm_input)
         self.output = exp_norm / np.sum(exp_norm, axis = 1, keepdims = True)
