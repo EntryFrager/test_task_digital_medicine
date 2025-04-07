@@ -87,7 +87,7 @@ criterion = ClassNLLCriterion()
 optimizer_name = 'sgd_momentum'
 
 nets = []
-activations = [ReLU, LeakyReLU, ELU, SoftPlus]      # LeakyReLU выдала лучшие результаты для тестовых данных, LeakyReLU + BN выдала лучшие 
+activations = [ReLU, LeakyReLU, ELU, SoftPlus] 
 
 for activ in activations:
     nets.append(get_net(activ, norm = False))
