@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 def custom_rule(df):
     return ((df['Total day charge'] > 45) & 
-            (df['Customer service calls'] > 3) & 
+            (df['Customer service calls'] > 2) & 
             (df['Total day minutes'] > 240)).astype(int)
 
 train_df = pd.read_csv('./data/table_data_train.csv')
